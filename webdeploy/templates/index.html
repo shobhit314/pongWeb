@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cyberpunk AI Pong</title>
+  <!-- Import custom fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
+  <style>
+    /* Root variables for cyberpunk colors */
+    :root {
+      --bg-color: #0d0d0d;
+      --grid-color: rgba(150, 0, 255, 0.1);
+      --neon-blue: #00f2ff;
+      --neon-pink: #ff00e6;
+      --neon-green: #3effa0;
+      --neon-red: #ff4d4d;
+      --text-color: #e0e0e0;
+      --paddle-width: 10px;
+      --paddle-height: 60px;
+      --ball-size: 10px;
+    }
+    
+    /* Global resets and base styling */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: 'Roboto', sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      flex-direction: column;
+      overflow: hidden;
+      /* Cyberpunk animated grid background with subtle movement */
+      background-image: 
+        linear-gradient(90deg, var(--grid-color) 1px, transparent 1px),
+        linear-gradient(180deg, var(--grid-color) 1px, transparent 1px);
+      background-size: 40px 40px;
+      animation: backgroundShift 10s linear infinite;
+      padding: 40px 20px;
+      position: relative;
+    }
+
+    @keyframes backgroundShift {
+      from { background-position: 0 0; }
+      to { background-position: 40px 40px; }
+    }
+    
+    h1 {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 3rem;
+      text-transform: uppercase;
+      margin-bottom: 40px;
+      letter-spacing: 2px;
+      background: linear-gradient(90deg, var(--neon-blue), var(--neon-pink));
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      text-shadow: 0 0 10px var(--neon-blue), 0 0 20px var(--neon-pink);
+    }
+    
+    /* Game Container Styles */
+    #game-container {
+      position: relative;
+      width: 400px;
+      height: 400px;
+      background-color: #000;
+      border: 2px solid var(--neon-blue);
+      box-shadow: 0 0 20px var(--neon-blue), 0 0 40px var(--neon-pink);
+      border-radius: 8px;
+      overflow: hidden;
+      margin-bottom: 20px;
+      animation: neonPulse 2s infinite alternate;
+      touch-action: none;
+    }
+    
+    /* Neon center line */
+    #center-line {
+      position: absolute;
+      left: 50%;
+      top: 0;
+      width: 2px;
+      height: 100%;
+      background: linear-gradient(to bottom, transparent 0%, var(--neon-blue) 40%, var(--neon-blue) 60%, transparent 100%);
+      transform: translateX(-50%);
+      opacity: 0.8;
+    }
+    
+    /* Paddle Styles */
+    #human-paddle, #ai-paddle {
+      position: absolute;
+      width: var(--paddle-width);
+      height: var(--paddle-height);
+      background: var(--text-color);
+      border-radius: 5px;
+      box-shadow: 0 0 15px var(--neon-green), 0 0 30px var(--neon-green);
+    }
+    
+    #human-paddle {
+      left: 10px;
+      background: linear-gradient(var(--neon-green), #fff);
+    }
+    
+    #ai-paddle {
+      right: 10px;
+      background: linear-gradient(var(--neon-red), #fff);
+      box-shadow: 0 0 15px var(--neon-red), 0 0 30px var(--neon-red);
+    }
+    
+    /* Ball Styles */
+    #ball {
+      position: absolute;
+      width: var(--ball-size);
+      height: var(--ball-size);
+      background: #fff;
+      border-radius: 50%;
+      box-shadow: 0 0 20px #fff, 0 0 40px var(--neon-blue);
+    }
+    
+    /* Score Display */
+    #score-display {
+      position: absolute;
+      width: 100%;
+      top: 20px;
+      display: flex;
+      justify-content: space-around;
+      font-family: 'Orbitron', sans-serif;
+      font-size: 36px;
+      text-shadow: 0 0 10px var(--neon-blue);
+      pointer-events: none;
+    }
+    
+    /* Controls and Buttons */
+    .controls {
+      margin-top: 20px;
+      display: flex;
+      gap: 20px;
+    }
+    
+    button {
+      background: linear-gradient(135deg, var(--neon-blue), var(--neon-pink));
+      border: none;
+      color: var(--bg-color);
+      padding: 10px 20px;
+      font-family: 'Orbitron', sans-serif;
+      font-size: 16px;
+      cursor: pointer;
+      border-radius: 5px;
+      box-shadow: 0 0 10px var(--neon-blue), 0 0 20px var(--neon-pink);
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    
+    button:hover {
+      transform: scale(1.05);
+      box-shadow: 0 0 15px var(--neon-blue), 0 0 25px var(--neon-pink);
+    }
+    
+    /* Instructions styling */
+    .instructions {
+      margin-top: 20px;
+      max-width: 400px;
+      text-align: center;
+      line-height: 1.6;
+      font-size: 16px;
+      background-color: rgba(0, 0, 0, 0.3);
+      padding: 15px;
+      border-radius: 8px;
+      border: 1px solid var(--neon-blue);
+      box-shadow: 0 0 15px var(--neon-blue);
+    }
+    
+    .instructions strong {
+      color: var(--neon-pink);
+      text-shadow: 0 0 8px var(--neon-pink);
+    }
+    
+    /* Game Over Overlay */
+    #game-over {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(0, 0, 0, 0.9);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      z-index: 100;
+      visibility: hidden;
+      opacity: 0;
+      transition: opacity 0.3s ease, visibility 0.3s ease;
+    }
+    
+    #game-over.active {
+      visibility: visible;
+      opacity: 1;
+    }
+    
+    #game-over h2 {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 3rem;
+      margin-bottom: 20px;
+      color: var(--neon-blue);
+      text-shadow: 0 0 10px var(--neon-pink);
+    }
+    
+    #game-over .buttons {
+      display: flex;
+      gap: 20px;
+    }
+    
+    /* Cyberpunk animated neon background effect for game container */
+    @keyframes neonPulse {
+      0%, 100% {
+        box-shadow: 0 0 20px var(--neon-blue), 0 0 40px var(--neon-pink);
+      }
+      50% {
+        box-shadow: 0 0 30px var(--neon-blue), 0 0 60px var(--neon-pink);
+      }
+    }
+    
+    /* Responsive design tweaks for mobile devices */
+    @media (max-width: 500px) {
+      #game-container {
+        width: 300px;
+        height: 300px;
+      }
+      
+      #score-display {
+        font-size: 28px;
+      }
+      
+      h1 {
+        font-size: 2.2rem;
+      }
+      
+      #game-over h2 {
+        font-size: 2.5rem;
+      }
+
+      /* Optional: Adjust background size for mobile */
+      body {
+        background-size: 30px 30px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <h1>Echo Protocol</h1>
+  
+  <div id="game-container">
+    <div id="center-line"></div>
+    <div id="human-paddle"></div>
+    <div id="ai-paddle"></div>
+    <div id="ball"></div>
+    <div id="score-display">
+      <div id="human-score">0</div>
+      <div id="ai-score">0</div>
+    </div>
+  </div>
+  
+  <div class="controls">
+    <button id="reset-btn">Reset Game</button>
+  </div>
+  
+  <div class="instructions">
+    <p>Controls: On desktop use <strong>W</strong> and <strong>S</strong>. On mobile, slide your finger vertically over the game area to move your paddle directly.</p>
+    <p>First to 10 points wins!</p>
+  </div>
+  
+  <!-- Game Over Overlay -->
+  <div id="game-over">
+    <h2 id="game-over-message">Game Over</h2>
+    <div class="buttons">
+      <button id="restart-btn">Restart</button>
+      <button id="quit-btn">Quit</button>
+    </div>
+  </div>
+  
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // Game elements
+      const humanPaddle = document.getElementById('human-paddle');
+      const aiPaddle = document.getElementById('ai-paddle');
+      const ball = document.getElementById('ball');
+      const humanScoreDisplay = document.getElementById('human-score');
+      const aiScoreDisplay = document.getElementById('ai-score');
+      const resetBtn = document.getElementById('reset-btn');
+      const gameOverOverlay = document.getElementById('game-over');
+      const gameOverMessage = document.getElementById('game-over-message');
+      const restartBtn = document.getElementById('restart-btn');
+      const quitBtn = document.getElementById('quit-btn');
+      const gameContainer = document.getElementById('game-container');
+  
+      // Game control variables
+      let gameActive = false;
+      let currentHumanTop = 0;
+      let animationFrameId = null; // To store the game loop handle
+  
+      // Keyboard control state
+      let keyState = { w: false, s: false };
+  
+      // Touch control state – instead of direction we will use absolute Y position.
+      let currentTouchY = null;
+  
+      // Keyboard event listeners for desktop
+      document.addEventListener('keydown', function(e) {
+        if (e.key.toLowerCase() === 'w') keyState.w = true;
+        if (e.key.toLowerCase() === 's') keyState.s = true;
+      });
+      document.addEventListener('keyup', function(e) {
+        if (e.key.toLowerCase() === 'w') keyState.w = false;
+        if (e.key.toLowerCase() === 's') keyState.s = false;
+      });
+  
+      // Touch event listeners for mobile – use absolute positioning.
+      gameContainer.addEventListener('touchstart', function(e) {
+        if (e.touches.length > 0) {
+          currentTouchY = e.touches[0].clientY;
+        }
+      });
+  
+      gameContainer.addEventListener('touchmove', function(e) {
+        e.preventDefault(); // prevent scrolling
+        if (e.touches.length > 0) {
+          currentTouchY = e.touches[0].clientY;
+        }
+      });
+  
+      gameContainer.addEventListener('touchend', function(e) {
+        // When touch ends, clear the value so keyboard can resume control if used.
+        currentTouchY = null;
+      });
+  
+      // Reset button event listener
+      resetBtn.addEventListener('click', resetGame);
+      restartBtn.addEventListener('click', () => {
+        hideGameOver();
+        resetGame();
+      });
+  
+      // Quit button: Attempt to close the window.
+      quitBtn.addEventListener('click', function() {
+        window.close();
+      });
+  
+      // Game loop: determine control input then update game state.
+      function gameLoop() {
+        if (!gameActive) return; // Stop loop if game is inactive
+  
+        let moveCommand = null;
+        // Prioritize touch control if available
+        if (currentTouchY !== null) {
+          const rect = gameContainer.getBoundingClientRect();
+          const scale = 400 / rect.height;
+          moveCommand = (currentTouchY - rect.top) * scale;
+        } else if (keyState.w) {
+          moveCommand = 'up';
+        } else if (keyState.s) {
+          moveCommand = 'down';
+        }
+  
+        updateGameState(moveCommand);
+        animationFrameId = requestAnimationFrame(gameLoop);
+      }
+  
+      // Update game state by sending move to server.
+      function updateGameState(move) {
+        fetch('/update', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ move: move })
+        })
+        .then(response => response.json())
+        .then(data => {
+          updateUI(data);
+          if (data.human_score >= 10 || data.ai_score >= 10) {
+            gameActive = false;
+            const winner = data.human_score >= 10 ? 'You Win!' : 'AI Wins!';
+            showGameOver(winner);
+          }
+        })
+        .catch(error => console.error('Error updating game state:', error));
+      }
+  
+      // Update UI elements based on game state.
+      function updateUI(state) {
+        if (currentTouchY !== null) {
+          currentHumanTop = state.human_paddle_pos - state.paddle_height / 2;
+        } else {
+          const targetHumanTop = state.human_paddle_pos - state.paddle_height / 2;
+          currentHumanTop += (targetHumanTop - currentHumanTop) * 0.3;
+        }
+        humanPaddle.style.top = currentHumanTop + 'px';
+        aiPaddle.style.top = (state.ai_paddle_pos - state.paddle_height / 2) + 'px';
+        ball.style.left = (state.ball_pos[0] - state.ball_size / 2) + 'px';
+        ball.style.top = (state.ball_pos[1] - state.ball_size / 2) + 'px';
+        humanScoreDisplay.textContent = state.human_score;
+        aiScoreDisplay.textContent = state.ai_score;
+      }
+  
+      // Show game over overlay.
+      function showGameOver(message) {
+        gameOverMessage.textContent = message;
+        gameOverOverlay.classList.add('active');
+      }
+  
+      // Hide game over overlay.
+      function hideGameOver() {
+        gameOverOverlay.classList.remove('active');
+      }
+  
+      // Reset game: cancel any existing loop, fetch the new state, then start the loop.
+      function resetGame() {
+        // Cancel any existing game loop to prevent multiples running simultaneously
+        if (animationFrameId !== null) {
+          cancelAnimationFrame(animationFrameId);
+          animationFrameId = null;
+        }
+        
+        fetch('/reset', { method: 'POST' })
+        .then(response => response.json())
+        .then(data => {
+          currentHumanTop = data.human_paddle_pos - (data.paddle_height / 2);
+          updateUI(data);
+          gameActive = true;
+          currentTouchY = null;
+          // Start a new game loop
+          animationFrameId = requestAnimationFrame(gameLoop);
+        })
+        .catch(error => console.error('Error resetting game:', error));
+      }
+  
+      // Start the game on page load
+      resetGame();
+    });
+  </script>
+</body>
+</html>
+
+
+
+
+
+<!-- templates/index.html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Pong Game</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #222;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            flex-direction: column;
+            color: white;
+        }
+        
+        #game-container {
+            position: relative;
+            width: 400px;
+            height: 400px;
+            border: 2px solid white;
+            background-color: black;
+            margin-bottom: 20px;
+        }
+        
+        #human-paddle, #ai-paddle {
+            position: absolute;
+            width: 10px;
+            height: 60px;
+            background-color: white;
+        }
+        
+        #human-paddle {
+            left: 0;
+        }
+        
+        #ai-paddle {
+            right: 0;
+        }
+        
+        #ball {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            background-color: white;
+            border-radius: 50%;
+        }
+        
+        #center-line {
+            position: absolute;
+            left: 50%;
+            top: 0;
+            width: 2px;
+            height: 100%;
+            background-color: rgba(255, 255, 255, 0.5);
+        }
+        
+        #score-display {
+            position: absolute;
+            width: 100%;
+            top: 20px;
+            display: flex;
+            justify-content: space-around;
+            font-size: 36px;
+        }
+        
+        .controls {
+            margin-top: 20px;
+            display: flex;
+            gap: 20px;
+        }
+        
+        button {
+            background-color: #4CAF50;
+            border: none;
+            color: white;
+            padding: 10px 20px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+        
+        .instructions {
+            margin-top: 20px;
+            max-width: 400px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <h1>Human vs AI Pong</h1>
+    
+    <div id="game-container">
+        <div id="center-line"></div>
+        <div id="human-paddle"></div>
+        <div id="ai-paddle"></div>
+        <div id="ball"></div>
+        <div id="score-display">
+            <div id="human-score">0</div>
+            <div id="ai-score">0</div>
+        </div>
+    </div>
+    
+    <div class="controls">
+        <button id="reset-btn">Reset Game</button>
+    </div>
+    
+    <div class="instructions">
+        <p>Controls: Use <strong>W</strong> to move up and <strong>S</strong> to move down.</p>
+        <p>First to 10 points wins!</p>
+    </div>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Game elements
+            const humanPaddle = document.getElementById('human-paddle');
+            const aiPaddle = document.getElementById('ai-paddle');
+            const ball = document.getElementById('ball');
+            const humanScoreDisplay = document.getElementById('human-score');
+            const aiScoreDisplay = document.getElementById('ai-score');
+            const resetBtn = document.getElementById('reset-btn');
+            
+            // Game variables
+            let gameActive = true;
+            let keyState = {
+                w: false,
+                s: false
+            };
+            
+            // Key event listeners
+            document.addEventListener('keydown', function(e) {
+                if (e.key.toLowerCase() === 'w') keyState.w = true;
+                if (e.key.toLowerCase() === 's') keyState.s = true;
+            });
+            
+            document.addEventListener('keyup', function(e) {
+                if (e.key.toLowerCase() === 'w') keyState.w = false;
+                if (e.key.toLowerCase() === 's') keyState.s = false;
+            });
+            
+            // Reset button event listener
+            resetBtn.addEventListener('click', resetGame);
+            
+            // Game loop
+            function gameLoop() {
+                if (!gameActive) return;
+                
+                let move = null;
+                if (keyState.w) move = 'up';
+                else if (keyState.s) move = 'down';
+                
+                updateGameState(move);
+                requestAnimationFrame(gameLoop);
+            }
+            
+            // Update game state by sending move to server
+            function updateGameState(move) {
+                fetch('/update', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ move: move })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    updateUI(data);
+                    
+                    // Check if game should end
+                    if (data.human_score >= 10 || data.ai_score >= 10) {
+                        gameActive = false;
+                        alert(data.human_score >= 10 ? 'You win!' : 'AI wins!');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error updating game state:', error);
+                });
+            }
+            
+            // Update UI elements based on game state
+            function updateUI(state) {
+                // Update paddle positions
+                humanPaddle.style.top = (state.human_paddle_pos - state.paddle_height/2) + 'px';
+                aiPaddle.style.top = (state.ai_paddle_pos - state.paddle_height/2) + 'px';
+                
+                // Update ball position
+                ball.style.left = (state.ball_pos[0] - state.ball_size/2) + 'px';
+                ball.style.top = (state.ball_pos[1] - state.ball_size/2) + 'px';
+                
+                // Update scores
+                humanScoreDisplay.textContent = state.human_score;
+                aiScoreDisplay.textContent = state.ai_score;
+            }
+            
+            // Reset game
+            function resetGame() {
+                fetch('/reset', {
+                    method: 'POST',
+                })
+                .then(response => response.json())
+                .then(data => {
+                    updateUI(data);
+                    gameActive = true;
+                    // Restart game loop if it was stopped
+                    if (!gameActive) {
+                        gameActive = true;
+                        gameLoop();
+                    }
+                })
+                .catch(error => {
+                    console.error('Error resetting game:', error);
+                });
+            }
+            
+            // Start the game loop
+            resetGame();
+            gameLoop();
+        });
+    </script>
+</body>
+</html> -->
